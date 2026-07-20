@@ -1545,17 +1545,7 @@ wl_chspec_driver_to_host(chanspec_t chanspec)
 int
 wl_cfg80211_ether_atoe(const char *a, struct ether_addr *n)
 {
-	char *c = NULL;
-	int count = 0;
-
-	memset(n, 0, ETHER_ADDR_LEN);
-	for (;;) {
-		n->octet[count++] = (uint8)simple_strtoul(a, &c, 16);
-		if (!*c++ || count == ETHER_ADDR_LEN)
-			break;
-		a = c;
-	}
-	return (count == ETHER_ADDR_LEN);
+	return mac_pton(a, n->octet) ? 1 : 0;
 }
 
 /* There isn't a lot of sense in it, but you can transmit anything you like */
