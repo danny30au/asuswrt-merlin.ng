@@ -86,43 +86,18 @@ int pktc_tx_enabled = 1;
 #endif
 spinlock_t pktctbl_lock;
 
-const unsigned int bitmap[] = {0x2, 0xC, 0xF0, 0xFF00, 0xFFFF0000};
-const unsigned int bitpos[] = {1, 2, 4, 8, 16};
-
 inline int get_32bitmap_pos(uint32 v)
 {
-	int i;
-
-	register unsigned int r = 0; /* result of log2(v) will go here */
-
 	if (!v)
 		return -1;
-
-	for (i = 4; i >= 0; i--) { /* unroll for speed... */
-		if (v & bitmap[i]) {
-			v >>= bitpos[i];
-			r |= bitpos[i];
-		}
-	}
-	return r;
+	return 31 - __builtin_clz(v);
 }
 
 inline int get_16bitmap_pos(uint16 v)
 {
-	int i;
-
-	register unsigned int r = 0; /* result of log2(v) will go here */
-
 	if (!v)
 		return -1;
-
-	for (i = 3; i >= 0; i--) { /* unroll for speed... */
-		if (v & bitmap[i]) {
-			v >>= bitpos[i];
-			r |= bitpos[i];
-		}
-	}
-	return r;
+	return 31 - __builtin_clz((uint32)v);
 }
 
 /* get the highest bit pos in bitmap */
@@ -270,7 +245,9 @@ wl_start_txchain_txqwork(pktc_info_t *pktci)
 		while (skb != NULL) {
 			da = (uint8 *)PKTDATA(pktci->osh, skb);
 			cnt++;
-			if ((prev_da != NULL) && (memcmp(prev_da, da, ETHER_ADDR_LEN) != 0))
+			if ((prev_da != NULL) && 
+			    (*(uint32_t *)prev_da != *(uint32_t *)da || 
+			     *(uint16_t *)(prev_da + 4) != *(uint16_t *)(da + 4)))
 				mixed_chain = 1;
 			if ((cnt >= PKTC_MAX_SIZE) || mixed_chain) {
 				if (mixed_chain) {
